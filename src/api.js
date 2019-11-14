@@ -51,6 +51,52 @@ MerchantAPI.prototype.getAddressBalance = function (guid, options) {
   })
 }
 
+MerchantAPI.prototype.calcFees = function (guid, options) {
+  try {
+    var r = options.recipients
+    var recipients = typeof r === 'object' ? r : JSON.parse(r)
+  } catch (e) {
+    return q.reject('ERR_JSON')
+  }
+
+  options.amount = []
+  options.to = []
+
+  Object.keys(recipients).forEach(function (r) {
+    options.to.push(r)
+    options.amount.push(recipients[r])
+  })
+
+  delete options.recipients
+
+  return this.getWallet(guid, options)
+    .then(requireSecondPassword(options))
+    .then(function (wallet) {
+      var from = isNaN(options.from) ? options.from : parseInt(options.from)
+
+      try {
+        from = typeof from === 'string' ? JSON.parse(from) : from;
+      } catch (e) {}
+
+      return wallet.createPayment()
+        .to(options.to)
+        .amount(options.amount)
+        .from(from)
+        .updateFeePerKb(0)
+        .build()
+    }).then(function (payment) {
+      delete payment.transaction
+
+      return {
+          fees: payment.fees,
+          balance: payment.balance,
+          txSize: payment.txSize,
+      };
+    }).catch(function (e) {
+      return e.error || 'ERR_PUSHTX'
+    });
+}
+
 MerchantAPI.prototype.sendMany = function (guid, options) {
   var recipients
 
