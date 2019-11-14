@@ -86,6 +86,12 @@ legacyAPI.all(
 )
 
 legacyAPI.all(
+  '/calc-fees',
+  required(['recipients', 'password']),
+  callApi('calcFees')
+)
+
+legacyAPI.all(
   '/sendmany',
   required(['recipients', 'password']),
   callApi('sendMany')
