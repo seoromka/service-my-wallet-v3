@@ -79,6 +79,10 @@ MerchantAPI.prototype.makePayment = function (guid, options) {
     .then(function (wallet) {
       var from = isNaN(options.from)
         ? options.from : parseInt(options.from)
+      
+      try {
+        from = typeof from === 'string' ? JSON.parse(from) : from;
+      } catch (e) {}
 
       var payment = wallet.createPayment()
         .to(options.to)
