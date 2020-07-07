@@ -78,12 +78,34 @@ MerchantAPI.prototype.calcFees = function (guid, options) {
         from = typeof from === 'string' ? JSON.parse(from) : from;
       } catch (e) {}
 
-      return wallet.createPayment()
+      var deferred = q.defer()
+
+      function success (tx) {
+        return tx;
+      }
+
+      function error (e) {
+        return q.reject(e)
+      }
+
+      wallet.createPayment()
         .to(options.to)
         .amount(options.amount)
         .from(from)
         .updateFeePerKb(0)
         .build()
+        .then(function (p) {
+          deferred.resolve(p);
+          return p;
+        })
+        .catch(function (e) {
+          var errMsg = e.error ? (e.error.message || e.error) : 'ERR_BUILDTX'
+          errMsg = errMsg.error ? errMsg.error : errMsg
+          deferred.reject({ error: errMsg, payment: e.payment })
+        })
+
+      return deferred.promise
+        .then(success).catch(error);
     }).then(function (payment) {
       delete payment.transaction
 
@@ -125,7 +147,7 @@ MerchantAPI.prototype.makePayment = function (guid, options) {
     .then(function (wallet) {
       var from = isNaN(options.from)
         ? options.from : parseInt(options.from)
-      
+
       try {
         from = typeof from === 'string' ? JSON.parse(from) : from;
       } catch (e) {}
